@@ -246,6 +246,8 @@ export default function Doctores() {
               label="Email"
               type="email"
               required
+              pattern="^[\w.-]+@[\w.-]+\.\w{2,}$"
+              title="Ingresa un correo con formato válido, ej: nombre@dominio.com"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
             />
