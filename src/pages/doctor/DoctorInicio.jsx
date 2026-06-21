@@ -39,17 +39,20 @@ export default function DoctorInicio() {
     setError("");
     try {
       // El backend ya filtra automáticamente por el doctor logueado (vía JWT)
-      const [listaCitas, listaPacientes] = await Promise.all([
-        listarCitas(),
-        listarPacientes(true),
-      ]);
-
-      const mapaPacientes = Object.fromEntries(
-        listaPacientes.map((p) => [p.idPaciente, p])
-      );
-
+      const listaCitas = await listarCitas();
       setCitas(listaCitas);
-      setPacientesPorId(mapaPacientes);
+
+      // listarPacientes está restringido a ADMIN/RECEPCIONISTA en el backend.
+      // Para DOCTOR no es accesible: se muestra el id del paciente en vez del nombre.
+      try {
+        const listaPacientes = await listarPacientes(true);
+        const mapaPacientes = Object.fromEntries(
+          listaPacientes.map((p) => [p.idPaciente, p])
+        );
+        setPacientesPorId(mapaPacientes);
+      } catch {
+        setPacientesPorId({});
+      }
     } catch (err) {
       setError(extraerMensajeError(err));
     } finally {
