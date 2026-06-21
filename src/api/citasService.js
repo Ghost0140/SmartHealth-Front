@@ -4,7 +4,10 @@ import { citasClient } from "./axiosClient";
 export async function listarCitas(estado) {
   const params = estado ? { estado } : {};
   const { data } = await citasClient.get("/citas", { params });
-  return data ?? [];
+  // El backend responde 204 No Content cuando la lista está vacía.
+  // Axios entrega "" (string vacío) en ese caso, no null/undefined,
+  // así que "?? []" no alcanza: hay que verificar que sea array de verdad.
+  return Array.isArray(data) ? data : [];
 }
 
 export async function obtenerCita(id) {

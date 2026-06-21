@@ -10,13 +10,13 @@ const MENU_POR_ROL = {
   ],
   DOCTOR: [
     { label: "Inicio", path: "/doctor" },
-    // { label: "Mis citas", path: "/doctor/citas" },
+    { label: "Historial", path: "/doctor/historial" },
   ],
   RECEPCIONISTA: [
     { label: "Inicio", path: "/recepcionista" },
     { label: "Pacientes", path: "/recepcionista/pacientes" },
     { label: "Doctores", path: "/recepcionista/doctores" },
-    // { label: "Citas", path: "/recepcionista/citas" },
+    { label: "Citas", path: "/recepcionista/citas" },
   ],
 };
 

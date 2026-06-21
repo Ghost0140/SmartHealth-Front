@@ -4,7 +4,7 @@ import { doctoresClient } from "./axiosClient";
 export async function listarDoctores(activo) {
   const params = activo === undefined ? {} : { activo };
   const { data } = await doctoresClient.get("/doctores", { params });
-  return data ?? [];
+  return Array.isArray(data) ? data : [];
 }
 
 export async function obtenerDoctor(id) {
@@ -36,5 +36,5 @@ export async function reactivarDoctor(id) {
 export async function listarEspecialidades(activo) {
   const params = activo === undefined ? {} : { activo };
   const { data } = await doctoresClient.get("/especialidades", { params });
-  return data ?? [];
+  return Array.isArray(data) ? data : [];
 }

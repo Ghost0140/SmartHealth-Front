@@ -34,6 +34,7 @@ export default function Doctores() {
   const [error, setError] = useState("");
   const [guardando, setGuardando] = useState(false);
 
+  // --- aportado por Gianca: filtro por especialidad + paginación ---
   const [filtroEspecialidad, setFiltroEspecialidad] = useState("");
   const [paginaActual, setPaginaActual] = useState(1);
   const itemsPorPagina = 8;
@@ -58,17 +59,19 @@ export default function Doctores() {
     cargar();
   }, []);
 
-  const doctoresFiltrados = doctores.filter((d) => 
-    filtroEspecialidad === "" || d.idEspecialidad.toString() === filtroEspecialidad
+  const doctoresFiltrados = doctores.filter(
+    (d) => filtroEspecialidad === "" || d.idEspecialidad.toString() === filtroEspecialidad
   );
-  
+
   const totalPaginas = Math.ceil(doctoresFiltrados.length / itemsPorPagina);
   const doctoresPaginados = doctoresFiltrados.slice(
     (paginaActual - 1) * itemsPorPagina,
     paginaActual * itemsPorPagina
   );
 
-  useEffect(() => { setPaginaActual(1); }, [filtroEspecialidad]);
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [filtroEspecialidad]);
 
   function abrirCrear() {
     setEditando(null);
@@ -94,6 +97,7 @@ export default function Doctores() {
     e.preventDefault();
     setError("");
     setGuardando(true);
+
     try {
       if (editando) {
         await actualizarDoctor(editando.idDoctor, {
@@ -123,8 +127,11 @@ export default function Doctores() {
 
   async function handleToggleActivo(doctor) {
     try {
-      if (doctor.activo) await desactivarDoctor(doctor.idDoctor);
-      else await reactivarDoctor(doctor.idDoctor);
+      if (doctor.activo) {
+        await desactivarDoctor(doctor.idDoctor);
+      } else {
+        await reactivarDoctor(doctor.idDoctor);
+      }
       await cargar();
     } catch (err) {
       setError(extraerMensajeError(err));
@@ -140,14 +147,19 @@ export default function Doctores() {
 
       <AlertaError mensaje={error && !modalAbierto ? error : ""} />
 
+      {/* --- aportado por Gianca: filtro por especialidad --- */}
       <div className="mb-4">
-        <select 
+        <select
           className="border border-slate-300 rounded p-2 text-sm text-slate-700"
           value={filtroEspecialidad}
           onChange={(e) => setFiltroEspecialidad(e.target.value)}
         >
           <option value="">Todas las especialidades</option>
-          {especialidades.map(e => <option key={e.idEspecialidad} value={e.idEspecialidad}>{e.nombre}</option>)}
+          {especialidades.map((e) => (
+            <option key={e.idEspecialidad} value={e.idEspecialidad}>
+              {e.nombre}
+            </option>
+          ))}
         </select>
       </div>
 
@@ -172,21 +184,40 @@ export default function Doctores() {
             <tbody className="divide-y divide-slate-100">
               {doctoresPaginados.map((d) => (
                 <tr key={d.idDoctor} className="hover:bg-slate-50">
-                  <td className="px-4 py-3 text-slate-800">Dr. {d.nombres} {d.apellidos}</td>
+                  <td className="px-4 py-3 text-slate-800">
+                    Dr. {d.nombres} {d.apellidos}
+                  </td>
                   <td className="px-4 py-3 text-slate-600">{d.nombreEspecialidad}</td>
                   <td className="px-4 py-3 text-slate-600">{d.dni}</td>
-                  <td className="px-4 py-3 text-slate-600">{d.telefono}<br/><span className="text-xs text-slate-400">{d.email}</span></td>
-                  
-                  <td className="px-4 py-3">
-                    {d.disponible ? <EstadoBadge activo={true} /> : <span className="text-red-500 font-semibold text-xs">No disponible</span>}
+                  <td className="px-4 py-3 text-slate-600">
+                    {d.telefono}
+                    <br />
+                    <span className="text-xs text-slate-400">{d.email}</span>
                   </td>
-                  
-                  <td className="px-4 py-3"><EstadoBadge activo={d.activo} /></td>
-                  
+                  <td className="px-4 py-3">
+                    {d.disponible ? (
+                      <EstadoBadge activo={true} />
+                    ) : (
+                      <span className="text-red-500 font-semibold text-xs">No disponible</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <EstadoBadge activo={d.activo} />
+                  </td>
                   {esAdmin && (
                     <td className="px-4 py-3 text-right space-x-2">
-                      <button onClick={() => abrirEditar(d)} className="text-teal-600 hover:underline text-xs font-medium">Editar</button>
-                      <button onClick={() => handleToggleActivo(d)} className="text-slate-500 hover:underline text-xs font-medium">{d.activo ? "Desactivar" : "Reactivar"}</button>
+                      <button
+                        onClick={() => abrirEditar(d)}
+                        className="text-teal-600 hover:underline text-xs font-medium"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleToggleActivo(d)}
+                        className="text-slate-500 hover:underline text-xs font-medium"
+                      >
+                        {d.activo ? "Desactivar" : "Reactivar"}
+                      </button>
                     </td>
                   )}
                 </tr>
@@ -196,41 +227,114 @@ export default function Doctores() {
         )}
       </div>
 
+      {/* --- aportado por Gianca: paginación --- */}
       <div className="flex justify-center gap-4 mt-4 text-sm text-slate-600 items-center">
-        <button disabled={paginaActual === 1} onClick={() => setPaginaActual(p => p - 1)} className="hover:text-teal-600 disabled:opacity-30">Anterior</button>
-        <span>Página {paginaActual} de {totalPaginas || 1}</span>
-        <button disabled={paginaActual >= totalPaginas} onClick={() => setPaginaActual(p => p + 1)} className="hover:text-teal-600 disabled:opacity-30">Siguiente</button>
+        <button
+          disabled={paginaActual === 1}
+          onClick={() => setPaginaActual((p) => p - 1)}
+          className="hover:text-teal-600 disabled:opacity-30"
+        >
+          Anterior
+        </button>
+        <span>
+          Página {paginaActual} de {totalPaginas || 1}
+        </span>
+        <button
+          disabled={paginaActual >= totalPaginas}
+          onClick={() => setPaginaActual((p) => p + 1)}
+          className="hover:text-teal-600 disabled:opacity-30"
+        >
+          Siguiente
+        </button>
       </div>
 
       {esAdmin && (
-        <Modal open={modalAbierto} onClose={() => setModalAbierto(false)} title={editando ? "Editar doctor" : "Nuevo doctor"}>
-           {/* ... formulario original ... */}
-           <form onSubmit={handleSubmit} className="space-y-4">
-              <Select label="Especialidad" required value={form.idEspecialidad} onChange={(e) => setForm({ ...form, idEspecialidad: e.target.value })}>
-                <option value="" disabled>Selecciona una especialidad</option>
-                {especialidades.map((esp) => <option key={esp.idEspecialidad} value={esp.idEspecialidad}>{esp.nombre}</option>)}
-              </Select>
-              {!editando && (
-                <>
-                  <Input label="Nombres" required value={form.nombres} onChange={(e) => setForm({ ...form, nombres: e.target.value })} />
-                  <Input label="Apellidos" required value={form.apellidos} onChange={(e) => setForm({ ...form, apellidos: e.target.value })} />
-                  <Input label="DNI (8 dígitos)" required maxLength={8} value={form.dni} onChange={(e) => setForm({ ...form, dni: e.target.value })} />
-                </>
-              )}
-              <Input label="Teléfono (9 dígitos)" required maxLength={9} value={form.telefono} onChange={(e) => setForm({ ...form, telefono: e.target.value })} />
-              <Input label="Email" type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-              {editando && (
-                <label className="flex items-center gap-2 text-sm text-slate-700">
-                  <input type="checkbox" checked={form.disponible} onChange={(e) => setForm({ ...form, disponible: e.target.checked })} />
-                  Disponible para citas
-                </label>
-              )}
-              <AlertaError mensaje={error} />
-              <div className="flex justify-end gap-2 pt-2">
-                <Button type="button" variant="secondary" onClick={() => setModalAbierto(false)}>Cancelar</Button>
-                <Button type="submit" disabled={guardando}>{guardando ? "Guardando..." : "Guardar"}</Button>
-              </div>
-           </form>
+        <Modal
+          open={modalAbierto}
+          onClose={() => setModalAbierto(false)}
+          title={editando ? "Editar doctor" : "Nuevo doctor"}
+        >
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Select
+              label="Especialidad"
+              required
+              value={form.idEspecialidad}
+              onChange={(e) => setForm({ ...form, idEspecialidad: e.target.value })}
+            >
+              <option value="" disabled>
+                Selecciona una especialidad
+              </option>
+              {especialidades.map((esp) => (
+                <option key={esp.idEspecialidad} value={esp.idEspecialidad}>
+                  {esp.nombre}
+                </option>
+              ))}
+            </Select>
+
+            {!editando && (
+              <>
+                <Input
+                  label="Nombres"
+                  required
+                  value={form.nombres}
+                  onChange={(e) => setForm({ ...form, nombres: e.target.value })}
+                />
+                <Input
+                  label="Apellidos"
+                  required
+                  value={form.apellidos}
+                  onChange={(e) => setForm({ ...form, apellidos: e.target.value })}
+                />
+                <Input
+                  label="DNI (8 dígitos)"
+                  required
+                  maxLength={8}
+                  value={form.dni}
+                  onChange={(e) => setForm({ ...form, dni: e.target.value })}
+                />
+              </>
+            )}
+
+            <Input
+              label="Teléfono (9 dígitos)"
+              required
+              maxLength={9}
+              value={form.telefono}
+              onChange={(e) => setForm({ ...form, telefono: e.target.value })}
+            />
+            <Input
+              label="Email"
+              type="email"
+              required
+              pattern="^[\w.-]+@[\w.-]+\.\w{2,}$"
+              title="Ingresa un correo con formato válido, ej: nombre@dominio.com"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+            />
+
+            {editando && (
+              <label className="flex items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={form.disponible}
+                  onChange={(e) => setForm({ ...form, disponible: e.target.checked })}
+                  className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                />
+                Disponible para citas
+              </label>
+            )}
+
+            <AlertaError mensaje={error} />
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="secondary" onClick={() => setModalAbierto(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={guardando}>
+                {guardando ? "Guardando..." : "Guardar"}
+              </Button>
+            </div>
+          </form>
         </Modal>
       )}
     </div>

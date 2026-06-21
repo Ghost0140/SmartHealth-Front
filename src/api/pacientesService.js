@@ -4,7 +4,8 @@ import { pacientesClient } from "./axiosClient";
 export async function listarPacientes(activo) {
   const params = activo === undefined ? {} : { activo };
   const { data } = await pacientesClient.get("/pacientes", { params });
-  return data ?? []; // backend devuelve 204 sin body si está vacío
+  // 204 No Content -> axios entrega "" (no null), por eso se valida Array.isArray
+  return Array.isArray(data) ? data : [];
 }
 
 export async function obtenerPaciente(id) {
