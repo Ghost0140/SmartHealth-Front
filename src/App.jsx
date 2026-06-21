@@ -7,6 +7,7 @@ import DashboardLayout from "./layouts/DashboardLayout";
 // Páginas por rol
 import AdminInicio from "./pages/admin/AdminInicio";
 import DoctorInicio from "./pages/doctor/DoctorInicio";
+import DoctorHistorial from "./pages/doctor/DoctorHistorial";
 import RecepcionistaInicio from "./pages/recepcionista/RecepcionistaInicio";
 
 // Páginas compartidas entre roles (permisos reales los valida el backend)
@@ -34,6 +35,7 @@ function App() {
           {/* Solo DOCTOR */}
           <Route element={<ProtectedRoute roles={["DOCTOR"]} />}>
             <Route path="/doctor" element={<DoctorInicio />} />
+            <Route path="/doctor/historial" element={<DoctorHistorial />} />
           </Route>
 
           {/* Solo RECEPCIONISTA */}

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { listarCitas, registrarCita } from "../../api/citasService";
 import { listarPacientes } from "../../api/pacientesService";
 import { listarDoctores } from "../../api/doctoresService";
-import { Select, Button, Modal, AlertaError } from "../../components/ui";
+import { Select, Button, Modal, AlertaError, EstadoBadge } from "../../components/ui";
 import { extraerMensajeError } from "../../utils/errorHandler";
 
 const FORM_VACIO = { idPaciente: "", idDoctor: "", fecha: "" };
@@ -41,6 +41,7 @@ export default function Citas() {
   const [filtroEstado, setFiltroEstado] = useState("");
   const [cargando, setCargando] = useState(true);
   const [modalAbierto, setModalAbierto] = useState(false);
+  const [citaDetalle, setCitaDetalle] = useState(null);
   const [form, setForm] = useState(FORM_VACIO);
   const [error, setError] = useState("");
   const [guardando, setGuardando] = useState(false);
@@ -145,7 +146,11 @@ export default function Citas() {
                 const paciente = pacientesPorId[c.idPaciente];
                 const doctor = doctoresPorId[c.idDoctor];
                 return (
-                  <tr key={c.idCita} className="hover:bg-slate-50">
+                  <tr
+                    key={c.idCita}
+                    onClick={() => setCitaDetalle(c)}
+                    className="hover:bg-slate-50 cursor-pointer"
+                  >
                     <td className="px-4 py-3 text-slate-800">{formatoFechaHora(c.fecha)}</td>
                     <td className="px-4 py-3 text-slate-600">
                       {paciente ? `${paciente.nombres} ${paciente.apellidos}` : `#${c.idPaciente}`}
@@ -230,6 +235,66 @@ export default function Citas() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        open={!!citaDetalle}
+        onClose={() => setCitaDetalle(null)}
+        title="Detalle de la cita"
+      >
+        {citaDetalle && (() => {
+          const paciente = pacientesPorId[citaDetalle.idPaciente];
+          const doctor = doctoresPorId[citaDetalle.idDoctor];
+          return (
+            <div className="space-y-4 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Estado</span>
+                <span
+                  className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                    ESTILO_ESTADO[citaDetalle.nombreEstado] ?? "bg-slate-100 text-slate-500"
+                  }`}
+                >
+                  {citaDetalle.nombreEstado}
+                </span>
+              </div>
+
+              <div>
+                <p className="text-slate-500 mb-1">Fecha y hora</p>
+                <p className="text-slate-800 font-medium">
+                  {formatoFechaHora(citaDetalle.fecha)}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-slate-500 mb-1">Paciente</p>
+                <p className="text-slate-800 font-medium">
+                  {paciente ? `${paciente.nombres} ${paciente.apellidos}` : `#${citaDetalle.idPaciente}`}
+                </p>
+                {paciente && (
+                  <p className="text-xs text-slate-400">
+                    DNI {paciente.dni} · {paciente.telefono} · {paciente.email}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <p className="text-slate-500 mb-1">Doctor</p>
+                <p className="text-slate-800 font-medium">
+                  {doctor ? `Dr. ${doctor.nombres} ${doctor.apellidos}` : `#${citaDetalle.idDoctor}`}
+                </p>
+                {doctor && (
+                  <p className="text-xs text-slate-400">{doctor.nombreEspecialidad}</p>
+                )}
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <Button variant="secondary" onClick={() => setCitaDetalle(null)}>
+                  Cerrar
+                </Button>
+              </div>
+            </div>
+          );
+        })()}
       </Modal>
     </div>
   );
