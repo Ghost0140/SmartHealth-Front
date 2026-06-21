@@ -1,58 +1,53 @@
 import { useEffect, useState } from "react";
-import { listarCitas, atenderCita, cancelarCita } from "../../api/citasService";
-import { listarPacientes } from "../../api/pacientesService";
-import { Button, AlertaError } from "../../components/ui";
+import {
+  listarDoctores,
+  registrarDoctor,
+  actualizarDoctor,
+  desactivarDoctor,
+  reactivarDoctor,
+  listarEspecialidades,
+} from "../../api/doctoresService";
+import { useAuth } from "../../context/AuthContext";
+import { Input, Select, Button, EstadoBadge, Modal, AlertaError } from "../../components/ui";
 import { extraerMensajeError } from "../../utils/errorHandler";
 
-function esHoy(fechaIso) {
-  const fecha = new Date(fechaIso);
-  const hoy = new Date();
-  return (
-    fecha.getFullYear() === hoy.getFullYear() &&
-    fecha.getMonth() === hoy.getMonth() &&
-    fecha.getDate() === hoy.getDate()
-  );
-}
-
-function formatoHora(fechaIso) {
-  return new Date(fechaIso).toLocaleTimeString("es-PE", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-const ESTILO_ESTADO = {
-  PROGRAMADA: "bg-teal-50 text-teal-700",
-  ATENDIDA: "bg-blue-50 text-blue-700",
-  CANCELADA: "bg-rose-50 text-rose-700",
+const FORM_VACIO = {
+  idEspecialidad: "",
+  nombres: "",
+  apellidos: "",
+  dni: "",
+  telefono: "",
+  email: "",
+  disponible: true,
 };
 
-export default function DoctorInicio() {
-  const [citas, setCitas] = useState([]);
-  const [pacientesPorId, setPacientesPorId] = useState({});
+export default function Doctores() {
+  const { usuario } = useAuth();
+  const esAdmin = usuario?.rol === "ADMIN";
+
+  const [doctores, setDoctores] = useState([]);
+  const [especialidades, setEspecialidades] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [modalAbierto, setModalAbierto] = useState(false);
+  const [editando, setEditando] = useState(null);
+  const [form, setForm] = useState(FORM_VACIO);
   const [error, setError] = useState("");
-  const [procesando, setProcesando] = useState(null); // idCita en proceso
+  const [guardando, setGuardando] = useState(false);
+
+  // --- aportado por Gianca: filtro por especialidad + paginación ---
+  const [filtroEspecialidad, setFiltroEspecialidad] = useState("");
+  const [paginaActual, setPaginaActual] = useState(1);
+  const itemsPorPagina = 8;
 
   async function cargar() {
     setCargando(true);
-    setError("");
     try {
-      // El backend ya filtra automáticamente por el doctor logueado (vía JWT)
-      const listaCitas = await listarCitas();
-      setCitas(listaCitas);
-
-      // listarPacientes está restringido a ADMIN/RECEPCIONISTA en el backend.
-      // Para DOCTOR no es accesible: se muestra el id del paciente en vez del nombre.
-      try {
-        const listaPacientes = await listarPacientes(true);
-        const mapaPacientes = Object.fromEntries(
-          listaPacientes.map((p) => [p.idPaciente, p])
-        );
-        setPacientesPorId(mapaPacientes);
-      } catch {
-        setPacientesPorId({});
-      }
+      const [listaDoctores, listaEspecialidades] = await Promise.all([
+        listarDoctores(),
+        listarEspecialidades(true),
+      ]);
+      setDoctores(listaDoctores);
+      setEspecialidades(listaEspecialidades);
     } catch (err) {
       setError(extraerMensajeError(err));
     } finally {
@@ -64,119 +59,284 @@ export default function DoctorInicio() {
     cargar();
   }, []);
 
-  const citasHoy = citas
-    .filter((c) => esHoy(c.fecha))
-    .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+  const doctoresFiltrados = doctores.filter(
+    (d) => filtroEspecialidad === "" || d.idEspecialidad.toString() === filtroEspecialidad
+  );
 
-  async function handleAtender(idCita) {
-    setProcesando(idCita);
+  const totalPaginas = Math.ceil(doctoresFiltrados.length / itemsPorPagina);
+  const doctoresPaginados = doctoresFiltrados.slice(
+    (paginaActual - 1) * itemsPorPagina,
+    paginaActual * itemsPorPagina
+  );
+
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [filtroEspecialidad]);
+
+  function abrirCrear() {
+    setEditando(null);
+    setForm(FORM_VACIO);
     setError("");
+    setModalAbierto(true);
+  }
+
+  function abrirEditar(doctor) {
+    setEditando(doctor);
+    setForm({
+      ...FORM_VACIO,
+      idEspecialidad: doctor.idEspecialidad,
+      telefono: doctor.telefono,
+      email: doctor.email,
+      disponible: doctor.disponible,
+    });
+    setError("");
+    setModalAbierto(true);
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError("");
+    setGuardando(true);
+
     try {
-      await atenderCita(idCita);
+      if (editando) {
+        await actualizarDoctor(editando.idDoctor, {
+          idEspecialidad: Number(form.idEspecialidad),
+          telefono: form.telefono,
+          email: form.email,
+          disponible: form.disponible,
+        });
+      } else {
+        await registrarDoctor({
+          idEspecialidad: Number(form.idEspecialidad),
+          nombres: form.nombres,
+          apellidos: form.apellidos,
+          dni: form.dni,
+          telefono: form.telefono,
+          email: form.email,
+        });
+      }
+      setModalAbierto(false);
       await cargar();
     } catch (err) {
       setError(extraerMensajeError(err));
     } finally {
-      setProcesando(null);
+      setGuardando(false);
     }
   }
 
-  async function handleCancelar(idCita) {
-    setProcesando(idCita);
-    setError("");
+  async function handleToggleActivo(doctor) {
     try {
-      await cancelarCita(idCita);
+      if (doctor.activo) {
+        await desactivarDoctor(doctor.idDoctor);
+      } else {
+        await reactivarDoctor(doctor.idDoctor);
+      }
       await cargar();
     } catch (err) {
       setError(extraerMensajeError(err));
-    } finally {
-      setProcesando(null);
     }
   }
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-slate-800">Mis citas de hoy</h1>
-      <p className="text-slate-500 text-sm mt-1">
-        {new Date().toLocaleDateString("es-PE", {
-          weekday: "long",
-          day: "numeric",
-          month: "long",
-        })}
-      </p>
-
-      <div className="mt-4">
-        <AlertaError mensaje={error} />
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-semibold text-slate-800">Doctores</h1>
+        {esAdmin && <Button onClick={abrirCrear}>+ Nuevo doctor</Button>}
       </div>
 
-      <div className="mt-4 space-y-3">
+      <AlertaError mensaje={error && !modalAbierto ? error : ""} />
+
+      {/* --- aportado por Gianca: filtro por especialidad --- */}
+      <div className="mb-4">
+        <select
+          className="border border-slate-300 rounded p-2 text-sm text-slate-700"
+          value={filtroEspecialidad}
+          onChange={(e) => setFiltroEspecialidad(e.target.value)}
+        >
+          <option value="">Todas las especialidades</option>
+          {especialidades.map((e) => (
+            <option key={e.idEspecialidad} value={e.idEspecialidad}>
+              {e.nombre}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden mt-4">
         {cargando ? (
-          <p className="text-sm text-slate-500">Cargando citas...</p>
-        ) : citasHoy.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-200 p-8 text-center">
-            <p className="text-slate-500 text-sm">No tienes citas programadas para hoy.</p>
-          </div>
+          <p className="p-6 text-sm text-slate-500">Cargando...</p>
+        ) : doctoresPaginados.length === 0 ? (
+          <p className="p-6 text-sm text-slate-500">No hay doctores registrados.</p>
         ) : (
-          citasHoy.map((cita) => {
-            const paciente = pacientesPorId[cita.idPaciente];
-            const enProceso = procesando === cita.idCita;
-            const esPendiente = cita.nombreEstado === "PROGRAMADA";
-
-            return (
-              <div
-                key={cita.idCita}
-                className="bg-white rounded-2xl border border-slate-200 p-5 flex items-center justify-between"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="text-center w-16">
-                    <p className="text-lg font-semibold text-slate-800">
-                      {formatoHora(cita.fecha)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-slate-800">
-                      {paciente
-                        ? `${paciente.nombres} ${paciente.apellidos}`
-                        : `Paciente #${cita.idPaciente}`}
-                    </p>
-                    {paciente && (
-                      <p className="text-xs text-slate-400">DNI: {paciente.dni}</p>
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-slate-500 text-left">
+              <tr>
+                <th className="px-4 py-3 font-medium">Nombre</th>
+                <th className="px-4 py-3 font-medium">Especialidad</th>
+                <th className="px-4 py-3 font-medium">DNI</th>
+                <th className="px-4 py-3 font-medium">Contacto</th>
+                <th className="px-4 py-3 font-medium">Disponible</th>
+                <th className="px-4 py-3 font-medium">Estado</th>
+                {esAdmin && <th className="px-4 py-3 font-medium"></th>}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {doctoresPaginados.map((d) => (
+                <tr key={d.idDoctor} className="hover:bg-slate-50">
+                  <td className="px-4 py-3 text-slate-800">
+                    Dr. {d.nombres} {d.apellidos}
+                  </td>
+                  <td className="px-4 py-3 text-slate-600">{d.nombreEspecialidad}</td>
+                  <td className="px-4 py-3 text-slate-600">{d.dni}</td>
+                  <td className="px-4 py-3 text-slate-600">
+                    {d.telefono}
+                    <br />
+                    <span className="text-xs text-slate-400">{d.email}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {d.disponible ? (
+                      <EstadoBadge activo={true} />
+                    ) : (
+                      <span className="text-red-500 font-semibold text-xs">No disponible</span>
                     )}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-                      ESTILO_ESTADO[cita.nombreEstado] ?? "bg-slate-100 text-slate-500"
-                    }`}
-                  >
-                    {cita.nombreEstado}
-                  </span>
-
-                  {esPendiente && (
-                    <div className="flex gap-2">
-                      <Button
-                        variant="secondary"
-                        disabled={enProceso}
-                        onClick={() => handleCancelar(cita.idCita)}
+                  </td>
+                  <td className="px-4 py-3">
+                    <EstadoBadge activo={d.activo} />
+                  </td>
+                  {esAdmin && (
+                    <td className="px-4 py-3 text-right space-x-2">
+                      <button
+                        onClick={() => abrirEditar(d)}
+                        className="text-teal-600 hover:underline text-xs font-medium"
                       >
-                        Cancelar
-                      </Button>
-                      <Button
-                        disabled={enProceso}
-                        onClick={() => handleAtender(cita.idCita)}
+                        Editar
+                      </button>
+                      <button
+                        onClick={() => handleToggleActivo(d)}
+                        className="text-slate-500 hover:underline text-xs font-medium"
                       >
-                        {enProceso ? "..." : "Atender"}
-                      </Button>
-                    </div>
+                        {d.activo ? "Desactivar" : "Reactivar"}
+                      </button>
+                    </td>
                   )}
-                </div>
-              </div>
-            );
-          })
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
+
+      {/* --- aportado por Gianca: paginación --- */}
+      <div className="flex justify-center gap-4 mt-4 text-sm text-slate-600 items-center">
+        <button
+          disabled={paginaActual === 1}
+          onClick={() => setPaginaActual((p) => p - 1)}
+          className="hover:text-teal-600 disabled:opacity-30"
+        >
+          Anterior
+        </button>
+        <span>
+          Página {paginaActual} de {totalPaginas || 1}
+        </span>
+        <button
+          disabled={paginaActual >= totalPaginas}
+          onClick={() => setPaginaActual((p) => p + 1)}
+          className="hover:text-teal-600 disabled:opacity-30"
+        >
+          Siguiente
+        </button>
+      </div>
+
+      {esAdmin && (
+        <Modal
+          open={modalAbierto}
+          onClose={() => setModalAbierto(false)}
+          title={editando ? "Editar doctor" : "Nuevo doctor"}
+        >
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Select
+              label="Especialidad"
+              required
+              value={form.idEspecialidad}
+              onChange={(e) => setForm({ ...form, idEspecialidad: e.target.value })}
+            >
+              <option value="" disabled>
+                Selecciona una especialidad
+              </option>
+              {especialidades.map((esp) => (
+                <option key={esp.idEspecialidad} value={esp.idEspecialidad}>
+                  {esp.nombre}
+                </option>
+              ))}
+            </Select>
+
+            {!editando && (
+              <>
+                <Input
+                  label="Nombres"
+                  required
+                  value={form.nombres}
+                  onChange={(e) => setForm({ ...form, nombres: e.target.value })}
+                />
+                <Input
+                  label="Apellidos"
+                  required
+                  value={form.apellidos}
+                  onChange={(e) => setForm({ ...form, apellidos: e.target.value })}
+                />
+                <Input
+                  label="DNI (8 dígitos)"
+                  required
+                  maxLength={8}
+                  value={form.dni}
+                  onChange={(e) => setForm({ ...form, dni: e.target.value })}
+                />
+              </>
+            )}
+
+            <Input
+              label="Teléfono (9 dígitos)"
+              required
+              maxLength={9}
+              value={form.telefono}
+              onChange={(e) => setForm({ ...form, telefono: e.target.value })}
+            />
+            <Input
+              label="Email"
+              type="email"
+              required
+              pattern="^[\w.-]+@[\w.-]+\.\w{2,}$"
+              title="Ingresa un correo con formato válido, ej: nombre@dominio.com"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+            />
+
+            {editando && (
+              <label className="flex items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={form.disponible}
+                  onChange={(e) => setForm({ ...form, disponible: e.target.checked })}
+                  className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                />
+                Disponible para citas
+              </label>
+            )}
+
+            <AlertaError mensaje={error} />
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="secondary" onClick={() => setModalAbierto(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={guardando}>
+                {guardando ? "Guardando..." : "Guardar"}
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }
