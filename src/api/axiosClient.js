@@ -8,6 +8,7 @@ const PORTS = {
   doctores: 8082,
   pacientes: 8081,
   recepcionistas: 8084,
+  notificaciones: 8092,
 };
 
 function createClient(port) {
@@ -46,3 +47,4 @@ export const citasClient = createClient(PORTS.citas);
 export const doctoresClient = createClient(PORTS.doctores);
 export const pacientesClient = createClient(PORTS.pacientes);
 export const recepcionistasClient = createClient(PORTS.recepcionistas);
+export const notificacionesClient = createClient(PORTS.notificaciones);

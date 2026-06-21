@@ -15,6 +15,8 @@ import Pacientes from "./pages/shared/Pacientes";
 import Doctores from "./pages/shared/Doctores";
 import Citas from "./pages/recepcionista/Citas";
 
+import Notificaciones from "./pages/admin/Notificaciones";
+
 function App() {
   return (
     <Routes>
@@ -30,6 +32,7 @@ function App() {
             <Route path="/admin" element={<AdminInicio />} />
             <Route path="/admin/pacientes" element={<Pacientes />} />
             <Route path="/admin/doctores" element={<Doctores />} />
+            <Route path="/admin/notificaciones" element={<Notificaciones />} />
           </Route>
 
           {/* Solo DOCTOR */}
