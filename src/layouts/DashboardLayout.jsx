@@ -8,6 +8,7 @@ const MENU_POR_ROL = {
     { label: "Inicio", path: "/admin" },
     { label: "Pacientes", path: "/admin/pacientes" },
     { label: "Doctores", path: "/admin/doctores" },
+    { label: "Recepcionistas", path: "/admin/recepcionistas" },
     { label: "Notificaciones", path: "/admin/notificaciones" },
   ],
   DOCTOR: [
