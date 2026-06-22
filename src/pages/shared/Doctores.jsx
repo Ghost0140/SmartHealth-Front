@@ -176,9 +176,9 @@ export default function Doctores() {
                 <th className="px-4 py-3 font-medium">Especialidad</th>
                 <th className="px-4 py-3 font-medium">DNI</th>
                 <th className="px-4 py-3 font-medium">Contacto</th>
-                <th className="px-4 py-3 font-medium">Disponible</th>
+                <th className="px-4 py-3 font-medium">Disponibilidad</th>
                 <th className="px-4 py-3 font-medium">Estado</th>
-                {esAdmin && <th className="px-4 py-3 font-medium"></th>}
+                {esAdmin && <th className="px-4 py-3 font-medium text-center">Acciones</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -196,7 +196,7 @@ export default function Doctores() {
                   </td>
                   <td className="px-4 py-3">
                     {d.disponible ? (
-                      <EstadoBadge activo={true} />
+                      <span className="text-emerald-700 font-semibold text-xs">Disponible</span>
                     ) : (
                       <span className="text-red-500 font-semibold text-xs">No disponible</span>
                     )}

@@ -9,17 +9,17 @@ import { extraerMensajeError } from "../../utils/errorHandler";
 
 const IMAGENES_CARRUSEL = [
   {
-    src: "https://images.unsplash.com/photo-1538108149393-fbbd81895907?w=1200&q=80",
+    src: "/images/clinica-instalaciones.jpg",
     titulo: "Instalaciones modernas",
     texto: "Espacios diseñados para el confort del paciente",
   },
   {
-    src: "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=1200&q=80",
+    src: "/images/equipo-medico.jpg",
     titulo: "Equipo médico calificado",
     texto: "Profesionales comprometidos con tu salud",
   },
   {
-    src: "https://images.unsplash.com/photo-1516549655169-df83a0774514?w=1200&q=80",
+    src: "/images/tecnologia-medica.jpg",
     titulo: "Tecnología de punta",
     texto: "Diagnóstico y tratamiento con equipamiento actualizado",
   },

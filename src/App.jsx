@@ -13,6 +13,7 @@ import RecepcionistaInicio from "./pages/recepcionista/RecepcionistaInicio";
 // Páginas compartidas entre roles (permisos reales los valida el backend)
 import Pacientes from "./pages/shared/Pacientes";
 import Doctores from "./pages/shared/Doctores";
+import Recepcionistas from "./pages/shared/Recepcionistas";
 import Citas from "./pages/recepcionista/Citas";
 
 import Notificaciones from "./pages/admin/Notificaciones";
@@ -32,6 +33,7 @@ function App() {
             <Route path="/admin" element={<AdminInicio />} />
             <Route path="/admin/pacientes" element={<Pacientes />} />
             <Route path="/admin/doctores" element={<Doctores />} />
+            <Route path="/admin/recepcionistas" element={<Recepcionistas />} />
             <Route path="/admin/notificaciones" element={<Notificaciones />} />
           </Route>
 
