@@ -19,6 +19,11 @@ export default function Pacientes() {
   const [form, setForm] = useState(FORM_VACIO);
   const [error, setError] = useState("");
   const [guardando, setGuardando] = useState(false);
+  
+  const [busqueda, setBusqueda] = useState("");
+  const [paginaActual, setPaginaActual] = useState(1);
+
+  const pacientesPorPagina = 5;
 
   async function cargar() {
     setCargando(true);
@@ -33,8 +38,32 @@ export default function Pacientes() {
   }
 
   useEffect(() => {
-    cargar();
+    cargar(); 
   }, []);
+
+  const pacientesFiltrados = pacientes.filter((p) =>{
+  const nombreCompleto = `${p.nombres} ${p.apellidos}`.toLowerCase();
+  const dniLimpio = p.dni.replace(/[.-]/g, ''); 
+  const busquedaLimpia = busqueda.replace(/[.-]/g, '');
+  
+  return nombreCompleto.includes(busqueda.toLowerCase()) || 
+        dniLimpio.includes(busquedaLimpia);
+});
+
+const totalPaginas = Math.ceil(
+  pacientesFiltrados.length / pacientesPorPagina
+);
+
+const inicio = (paginaActual - 1) * pacientesPorPagina;
+
+const pacientesPaginados = pacientesFiltrados.slice(
+  inicio,
+  inicio + pacientesPorPagina
+);
+
+useEffect(() => {
+  setPaginaActual(1);
+}, [busqueda]);
 
   function abrirCrear() {
     setEditando(null);
@@ -96,12 +125,21 @@ export default function Pacientes() {
 
       <AlertaError mensaje={error && !modalAbierto ? error : ""} />
 
+      <div className="mb-4">
+        <Input
+          placeholder="Buscar por nombre o DNI..."
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+        />
+      </div>
+
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden mt-4">
         {cargando ? (
           <p className="p-6 text-sm text-slate-500">Cargando...</p>
         ) : pacientes.length === 0 ? (
           <p className="p-6 text-sm text-slate-500">No hay pacientes registrados.</p>
         ) : (
+          <>
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-slate-500 text-left">
               <tr>
@@ -114,7 +152,7 @@ export default function Pacientes() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {pacientes.map((p) => (
+              {pacientesPaginados.map((p) => (
                 <tr key={p.idPaciente} className="hover:bg-slate-50">
                   <td className="px-4 py-3 text-slate-800">
                     {p.nombres} {p.apellidos}
@@ -143,6 +181,29 @@ export default function Pacientes() {
               ))}
             </tbody>
           </table>
+          <div className="flex justify-center gap-2 p-4">
+      <Button
+        disabled={paginaActual === 1}
+        onClick={() => setPaginaActual(paginaActual - 1)}
+      >
+        Anterior
+      </Button>
+
+      <span className="px-3 py-2 text-sm">
+        Página {paginaActual} de {totalPaginas || 1}
+      </span>
+
+      <Button
+        disabled={
+          paginaActual === totalPaginas ||
+          totalPaginas === 0
+        }
+        onClick={() => setPaginaActual(paginaActual + 1)}
+      >
+        Siguiente
+      </Button>
+    </div>
+  </>
         )}
       </div>
 
