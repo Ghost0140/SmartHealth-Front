@@ -6,6 +6,7 @@ import { listarNotificaciones } from "../api/notificacionesService";
 const MENU_POR_ROL = {
   ADMIN: [
     { label: "Inicio", path: "/admin" },
+    { label: "Usuarios", path: "/admin/usuarios" },
     { label: "Pacientes", path: "/admin/pacientes" },
     { label: "Doctores", path: "/admin/doctores" },
     { label: "Recepcionistas", path: "/admin/recepcionistas" },

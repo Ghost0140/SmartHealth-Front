@@ -6,6 +6,7 @@ import DashboardLayout from "./layouts/DashboardLayout";
 
 // Páginas por rol
 import AdminInicio from "./pages/admin/AdminInicio";
+import Usuarios from "./pages/admin/Usuarios";
 import DoctorInicio from "./pages/doctor/DoctorInicio";
 import DoctorHistorial from "./pages/doctor/DoctorHistorial";
 import RecepcionistaInicio from "./pages/recepcionista/RecepcionistaInicio";
@@ -31,6 +32,7 @@ function App() {
           {/* Solo ADMIN */}
           <Route element={<ProtectedRoute roles={["ADMIN"]} />}>
             <Route path="/admin" element={<AdminInicio />} />
+            <Route path="/admin/usuarios" element={<Usuarios />} />
             <Route path="/admin/pacientes" element={<Pacientes />} />
             <Route path="/admin/doctores" element={<Doctores />} />
             <Route path="/admin/recepcionistas" element={<Recepcionistas />} />
