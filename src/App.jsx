@@ -18,6 +18,8 @@ import Recepcionistas from "./pages/shared/Recepcionistas";
 import Citas from "./pages/recepcionista/Citas";
 
 import Notificaciones from "./pages/admin/Notificaciones";
+import Medicamentos from "./pages/farmacia/Medicamentos";
+import Recetas from "./pages/farmacia/Recetas";
 
 function App() {
   return (
@@ -37,12 +39,14 @@ function App() {
             <Route path="/admin/doctores" element={<Doctores />} />
             <Route path="/admin/recepcionistas" element={<Recepcionistas />} />
             <Route path="/admin/notificaciones" element={<Notificaciones />} />
+            <Route path="/admin/medicamentos" element={<Medicamentos />} />
           </Route>
 
           {/* Solo DOCTOR */}
           <Route element={<ProtectedRoute roles={["DOCTOR"]} />}>
             <Route path="/doctor" element={<DoctorInicio />} />
             <Route path="/doctor/historial" element={<DoctorHistorial />} />
+            <Route path="/doctor/recetas" element={<Recetas />} />
           </Route>
 
           {/* Solo RECEPCIONISTA */}

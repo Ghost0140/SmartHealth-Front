@@ -11,10 +11,12 @@ const MENU_POR_ROL = {
     { label: "Doctores", path: "/admin/doctores" },
     { label: "Recepcionistas", path: "/admin/recepcionistas" },
     { label: "Notificaciones", path: "/admin/notificaciones" },
+    { label: "Medicamentos", path: "/admin/medicamentos" },
   ],
   DOCTOR: [
     { label: "Inicio", path: "/doctor" },
     { label: "Historial", path: "/doctor/historial" },
+    { label: "Recetas", path: "/doctor/recetas" },
   ],
   RECEPCIONISTA: [
     { label: "Inicio", path: "/recepcionista" },
@@ -62,12 +64,12 @@ export default function DashboardLayout() {
   return (
     <div className="min-h-screen flex bg-slate-50">
       {/* Sidebar */}
-      <aside className="w-60 bg-white border-r border-slate-200 flex flex-col">
+      <aside className="w-60 bg-white border-r border-slate-200 flex flex-col min-h-screen sticky top-0 h-screen">
         <div className="px-5 py-5 border-b border-slate-200">
           <h2 className="text-lg font-semibold text-teal-700">SmartHealth</h2>
         </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-1">
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {menu.map((item) => (
             <NavLink
               key={item.path}
