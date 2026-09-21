@@ -15,6 +15,7 @@ import RecepcionistaInicio from "./pages/recepcionista/RecepcionistaInicio";
 import Pacientes from "./pages/shared/Pacientes";
 import Doctores from "./pages/shared/Doctores";
 import Recepcionistas from "./pages/shared/Recepcionistas";
+import Chat from "./pages/shared/Chat";
 import Citas from "./pages/recepcionista/Citas";
 
 import Notificaciones from "./pages/admin/Notificaciones";
@@ -40,6 +41,7 @@ function App() {
             <Route path="/admin/recepcionistas" element={<Recepcionistas />} />
             <Route path="/admin/notificaciones" element={<Notificaciones />} />
             <Route path="/admin/medicamentos" element={<Medicamentos />} />
+            <Route path="/admin/chat" element={<Chat />} />
           </Route>
 
           {/* Solo DOCTOR */}
@@ -47,6 +49,7 @@ function App() {
             <Route path="/doctor" element={<DoctorInicio />} />
             <Route path="/doctor/historial" element={<DoctorHistorial />} />
             <Route path="/doctor/recetas" element={<Recetas />} />
+            <Route path="/doctor/chat" element={<Chat />} />
           </Route>
 
           {/* Solo RECEPCIONISTA */}
@@ -55,6 +58,7 @@ function App() {
             <Route path="/recepcionista/pacientes" element={<Pacientes />} />
             <Route path="/recepcionista/doctores" element={<Doctores />} />
             <Route path="/recepcionista/citas" element={<Citas />} />
+            <Route path="/recepcionista/chat" element={<Chat />} />
           </Route>
 
         </Route>
