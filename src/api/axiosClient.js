@@ -5,6 +5,7 @@ import axios from "axios";
 const PORTS = {
   auth: 8086,
   citas: 8083,
+  chat: 8088,
   doctores: 8082,
   pacientes: 8081,
   recepcionistas: 8084,
@@ -44,6 +45,9 @@ function createClient(port) {
 
 export const authClient = createClient(PORTS.auth);
 export const citasClient = createClient(PORTS.citas);
+export const chatClient = axios.create({
+  baseURL: "/chat-api",
+});
 export const doctoresClient = createClient(PORTS.doctores);
 export const pacientesClient = createClient(PORTS.pacientes);
 export const recepcionistasClient = createClient(PORTS.recepcionistas);

@@ -12,17 +12,20 @@ const MENU_POR_ROL = {
     { label: "Recepcionistas", path: "/admin/recepcionistas" },
     { label: "Notificaciones", path: "/admin/notificaciones" },
     { label: "Medicamentos", path: "/admin/medicamentos" },
+    { label: "Chat", path: "/admin/chat" },
   ],
   DOCTOR: [
     { label: "Inicio", path: "/doctor" },
     { label: "Historial", path: "/doctor/historial" },
     { label: "Recetas", path: "/doctor/recetas" },
+    { label: "Chat", path: "/doctor/chat" },
   ],
   RECEPCIONISTA: [
     { label: "Inicio", path: "/recepcionista" },
     { label: "Pacientes", path: "/recepcionista/pacientes" },
     { label: "Doctores", path: "/recepcionista/doctores" },
     { label: "Citas", path: "/recepcionista/citas" },
+    { label: "Chat", path: "/recepcionista/chat" },
   ],
 };
 

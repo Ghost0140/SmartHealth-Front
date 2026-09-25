@@ -1,8 +1,8 @@
 import axios from "axios";
 
-// pharmacy-service corre en el puerto 8085 (application.properties)
+// pharmacy-service corre en el puerto 8089 (application.properties)
 const farmaciaClient = axios.create({
-  baseURL: "http://localhost:8085/api",
+  baseURL: "http://localhost:8089/api",
 });
 
 // Adjunta JWT a cada request
