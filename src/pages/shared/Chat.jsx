@@ -10,6 +10,7 @@ const CONTACTOS_BASE = [
   { id: "admin", nombre: "Administrador", rol: "ADMIN", inicial: "A" },
   { id: "doctor", nombre: "Doctor", rol: "DOCTOR", inicial: "D" },
   { id: "recepcionista", nombre: "Recepcionista", rol: "RECEPCIONISTA", inicial: "R" },
+  { id: "sistema", nombre: "Avisos del sistema", rol: "SYSTEM", inicial: "S" },
 ];
 
 function aliasPorRol(rol) {
@@ -71,8 +72,10 @@ export default function Chat() {
       mensajes
         .filter(
           (mensaje) =>
-            (mensaje.emisor === identidad && mensaje.receptor === receptor) ||
-            (mensaje.emisor === receptor && mensaje.receptor === identidad)
+            (receptor === "sistema" && mensaje.emisor === "Sistema" && mensaje.receptor === identidad) ||
+            (receptor !== "sistema" &&
+              ((mensaje.emisor === identidad && mensaje.receptor === receptor) ||
+                (mensaje.emisor === receptor && mensaje.receptor === identidad)))
         )
         .sort((a, b) => new Date(a.fecha ?? 0) - new Date(b.fecha ?? 0)),
     [mensajes, identidad, receptor]
@@ -240,7 +243,7 @@ export default function Chat() {
             {contactos.map((contacto) => {
               const activo = receptor === contacto.id;
               const noLeidos = mensajes.filter(
-                (mensaje) => mensaje.emisor === contacto.id && mensaje.receptor === identidad
+                (mensaje) => (contacto.id === "sistema" && mensaje.emisor === "Sistema" && mensaje.receptor === identidad) || (contacto.id !== "sistema" && mensaje.emisor === contacto.id && mensaje.receptor === identidad)
               ).length;
 
               return (

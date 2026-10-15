@@ -18,7 +18,6 @@ import Recepcionistas from "./pages/shared/Recepcionistas";
 import Chat from "./pages/shared/Chat";
 import Citas from "./pages/recepcionista/Citas";
 
-import Notificaciones from "./pages/admin/Notificaciones";
 import Medicamentos from "./pages/farmacia/Medicamentos";
 import Recetas from "./pages/farmacia/Recetas";
 
@@ -39,7 +38,6 @@ function App() {
             <Route path="/admin/pacientes" element={<Pacientes />} />
             <Route path="/admin/doctores" element={<Doctores />} />
             <Route path="/admin/recepcionistas" element={<Recepcionistas />} />
-            <Route path="/admin/notificaciones" element={<Notificaciones />} />
             <Route path="/admin/medicamentos" element={<Medicamentos />} />
             <Route path="/admin/chat" element={<Chat />} />
           </Route>

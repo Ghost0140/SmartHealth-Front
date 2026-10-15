@@ -1,7 +1,5 @@
-import { useEffect, useState } from "react";
 import { Outlet, useNavigate, NavLink } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { listarNotificaciones } from "../api/notificacionesService";
 
 const MENU_POR_ROL = {
   ADMIN: [
@@ -10,7 +8,6 @@ const MENU_POR_ROL = {
     { label: "Pacientes", path: "/admin/pacientes" },
     { label: "Doctores", path: "/admin/doctores" },
     { label: "Recepcionistas", path: "/admin/recepcionistas" },
-    { label: "Notificaciones", path: "/admin/notificaciones" },
     { label: "Medicamentos", path: "/admin/medicamentos" },
     { label: "Chat", path: "/admin/chat" },
   ],
@@ -34,31 +31,6 @@ export default function DashboardLayout() {
   const navigate = useNavigate();
 
   const menu = MENU_POR_ROL[usuario?.rol] ?? [];
-  const esAdmin = usuario?.rol === "ADMIN";
-  const [noLeidas, setNoLeidas] = useState(0);
-
-  useEffect(() => {
-    async function cargarContador() {
-      try {
-        const data = await listarNotificaciones();
-        const total = data.filter((n) => !n.leido).length;
-        setNoLeidas(total);
-      } catch {
-        setNoLeidas(0);
-      }
-    }
-
-    // Solo ADMIN tiene ruta de notificaciones — no cargar para otros roles
-    if (usuario && esAdmin) {
-      cargarContador();
-    }
-
-    window.addEventListener("notificacionesActualizadas", cargarContador);
-    return () => {
-      window.removeEventListener("notificacionesActualizadas", cargarContador);
-    };
-  }, [usuario, esAdmin]);
-
   function handleLogout() {
     logout();
     navigate("/login", { replace: true });
@@ -104,23 +76,6 @@ export default function DashboardLayout() {
 
       {/* Contenido */}
       <main className="flex-1">
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-end px-8">
-          {/* Campana solo visible para ADMIN — otros roles no tienen ruta de notificaciones */}
-          {esAdmin && (
-            <button
-              onClick={() => navigate("/admin/notificaciones")}
-              className="relative rounded-full border border-slate-200 px-3 py-2 text-sm hover:bg-slate-50"
-              title="Notificaciones"
-            >
-              🔔
-              {noLeidas > 0 && (
-                <span className="absolute -top-2 -right-2 rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white">
-                  {noLeidas}
-                </span>
-              )}
-            </button>
-          )}
-        </header>
 
         <section className="p-8">
           <Outlet />
