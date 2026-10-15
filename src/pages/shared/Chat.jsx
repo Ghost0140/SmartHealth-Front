@@ -4,7 +4,7 @@ import { listarMensajesChat } from "../../api/chatService";
 import { AlertaError, Button, Input } from "../../components/ui";
 import { extraerMensajeError } from "../../utils/errorHandler";
 
-const CHAT_URL = "http://localhost:8085/chat";
+const CHAT_URL = "http://localhost:8088/chat";
 const STOMP_DESTINO = "/app/mensaje";
 const CONTACTOS_BASE = [
   { id: "admin", nombre: "Administrador", rol: "ADMIN", inicial: "A" },
