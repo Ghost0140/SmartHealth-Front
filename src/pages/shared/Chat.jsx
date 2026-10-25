@@ -1,25 +1,28 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { listarMensajesChat } from "../../api/chatService";
+import { listarDoctores } from "../../api/doctoresService";
+import { listarRecepcionistas } from "../../api/recepcionistasService";
 import { AlertaError, Button, Input } from "../../components/ui";
 import { extraerMensajeError } from "../../utils/errorHandler";
 
 const CHAT_URL = "http://localhost:8088/chat";
 const STOMP_DESTINO = "/app/mensaje";
-const CONTACTOS_BASE = [
-  { id: "admin", nombre: "Administrador", rol: "ADMIN", inicial: "A" },
-  { id: "doctor", nombre: "Doctor", rol: "DOCTOR", inicial: "D" },
-  { id: "recepcionista", nombre: "Recepcionista", rol: "RECEPCIONISTA", inicial: "R" },
-  { id: "sistema", nombre: "Avisos del sistema", rol: "SYSTEM", inicial: "S" },
-];
+function identidadPorUsuario(usuario) {
+  if (usuario?.rol === "ADMIN") return "admin";
+  if (usuario?.rol === "DOCTOR" && usuario.idDoctor) return `doctor:${usuario.idDoctor}`;
+  if (usuario?.rol === "RECEPCIONISTA" && usuario.correo) {
+    return `recepcionista:${usuario.correo.trim().toLowerCase()}`;
+  }
+  return "";
+}
 
 function aliasPorRol(rol) {
-  const mapa = {
-    ADMIN: "admin",
-    DOCTOR: "doctor",
-    RECEPCIONISTA: "recepcionista",
-  };
-  return mapa[rol] ?? "usuario";
+  return rol?.toLowerCase() ?? "";
+}
+
+function inicialDe(nombre) {
+  return nombre?.trim()?.charAt(0)?.toUpperCase() ?? "?";
 }
 
 function formatoHora(fecha) {
@@ -56,9 +59,12 @@ async function cargarDependenciasChat() {
 
 export default function Chat() {
   const { usuario } = useAuth();
-  const identidad = aliasPorRol(usuario?.rol);
-  const contactos = CONTACTOS_BASE.filter((contacto) => contacto.id !== identidad);
-  const [receptor, setReceptor] = useState(contactos[0]?.id ?? "");
+  const identidad = identidadPorUsuario(usuario);
+  const rolAlias = aliasPorRol(usuario?.rol);
+  const [doctores, setDoctores] = useState([]);
+  const [recepcionistas, setRecepcionistas] = useState([]);
+  const [receptor, setReceptor] = useState("");
+  const [busquedaContacto, setBusquedaContacto] = useState("");
   const [mensajes, setMensajes] = useState([]);
   const [contenido, setContenido] = useState("");
   const [conectado, setConectado] = useState(false);
@@ -67,22 +73,84 @@ export default function Chat() {
   const stompRef = useRef(null);
   const mensajesRef = useRef(null);
 
+  const contactos = useMemo(() => {
+    const lista = [];
+    if (usuario?.rol !== "ADMIN") {
+      lista.push({ id: "admin", nombre: "Administrador", detalle: "Administración", rol: "ADMIN", inicial: "A" });
+    }
+    doctores.forEach((doctor) => {
+      const id = `doctor:${doctor.idDoctor}`;
+      if (id === identidad) return;
+      const nombre = `Dr. ${doctor.nombres} ${doctor.apellidos}`.trim();
+      lista.push({
+        id,
+        nombre,
+        detalle: doctor.nombreEspecialidad || doctor.email,
+        correo: doctor.email,
+        rol: "DOCTOR",
+        inicial: inicialDe(doctor.nombres),
+      });
+    });
+    recepcionistas.forEach((recepcionista) => {
+      const correo = recepcionista.email?.trim().toLowerCase();
+      if (!correo) return;
+      const id = `recepcionista:${correo}`;
+      if (id === identidad) return;
+      const nombre = `${recepcionista.nombres} ${recepcionista.apellidos}`.trim();
+      lista.push({
+        id,
+        nombre,
+        detalle: recepcionista.email,
+        correo: recepcionista.email,
+        rol: "RECEPCIONISTA",
+        inicial: inicialDe(recepcionista.nombres),
+      });
+    });
+    lista.push({ id: "sistema", nombre: "Avisos del sistema", detalle: "Mensajes automáticos", rol: "SYSTEM", inicial: "S" });
+    return lista;
+  }, [doctores, recepcionistas, identidad, usuario?.rol]);
+  const receptorActivo = contactos.some((contacto) => contacto.id === receptor)
+    ? receptor
+    : contactos[0]?.id ?? "";
+  const contactosFiltrados = contactos.filter((contacto) =>
+    `${contacto.nombre} ${contacto.detalle ?? ""} ${contacto.rol}`
+      .toLowerCase()
+      .includes(busquedaContacto.trim().toLowerCase())
+  );
+
   const conversacion = useMemo(
     () =>
       mensajes
         .filter(
           (mensaje) =>
-            (receptor === "sistema" && mensaje.emisor === "Sistema" && mensaje.receptor === identidad) ||
-            (receptor !== "sistema" &&
-              ((mensaje.emisor === identidad && mensaje.receptor === receptor) ||
-                (mensaje.emisor === receptor && mensaje.receptor === identidad)))
+            (receptorActivo === "sistema" && mensaje.emisor === "Sistema" && (mensaje.receptor === identidad || mensaje.receptor === rolAlias)) ||
+            (receptorActivo !== "sistema" &&
+              ((mensaje.emisor === identidad && mensaje.receptor === receptorActivo) ||
+                (mensaje.emisor === receptorActivo && mensaje.receptor === identidad)))
         )
         .sort((a, b) => new Date(a.fecha ?? 0) - new Date(b.fecha ?? 0)),
-    [mensajes, identidad, receptor]
+    [mensajes, identidad, receptorActivo, rolAlias]
   );
+
+  useEffect(() => {
+    let activo = true;
+    Promise.all([listarDoctores(true), listarRecepcionistas(true)])
+      .then(([listaDoctores, listaRecepcionistas]) => {
+        if (!activo) return;
+        setDoctores(listaDoctores);
+        setRecepcionistas(listaRecepcionistas);
+      })
+      .catch((err) => {
+        if (activo) setError(extraerMensajeError(err));
+      });
+    return () => {
+      activo = false;
+    };
+  }, []);
 
   async function cargarHistorial() {
     try {
+      if (!identidad) return;
       const data = await listarMensajesChat();
       setMensajes(data);
     } catch (err) {
@@ -93,6 +161,7 @@ export default function Chat() {
   useEffect(() => {
     let activo = true;
 
+    if (!identidad) return undefined;
     listarMensajesChat()
       .then((data) => {
         if (activo) setMensajes(data);
@@ -104,14 +173,14 @@ export default function Chat() {
     return () => {
       activo = false;
     };
-  }, []);
+  }, [identidad, rolAlias]);
 
   useEffect(() => {
     mensajesRef.current?.scrollTo({
       top: mensajesRef.current.scrollHeight,
       behavior: "smooth",
     });
-  }, [conversacion.length, receptor]);
+  }, [conversacion.length, receptorActivo]);
 
   useEffect(() => {
     return () => {
@@ -123,6 +192,10 @@ export default function Chat() {
 
   async function conectar() {
     if (stompRef.current?.connected || conectando) return;
+    if (!identidad) {
+      setError("No se encontró una identidad válida para esta cuenta. Cierra sesión e inicia nuevamente.");
+      return;
+    }
 
     setError("");
     setConectando(true);
@@ -133,15 +206,22 @@ export default function Chat() {
       stomp.debug = null;
 
       stomp.connect(
-        {},
+        { Authorization: `Bearer ${localStorage.getItem("token")}` },
         () => {
           stompRef.current = stomp;
           setConectado(true);
           setConectando(false);
 
-          stomp.subscribe(`/topic/${identidad}`, (message) => {
-            const recibido = JSON.parse(message.body);
-            setMensajes((actuales) => [...actuales, recibido]);
+          const destinos = [...new Set([identidad, rolAlias].filter(Boolean))];
+          destinos.forEach((destino) => {
+            stomp.subscribe(`/topic/${destino}`, (message) => {
+              const recibido = JSON.parse(message.body);
+              setMensajes((actuales) =>
+                recibido.id && actuales.some((actual) => actual.id === recibido.id)
+                  ? actuales
+                  : [...actuales, recibido]
+              );
+            });
           });
         },
         () => {
@@ -171,7 +251,11 @@ export default function Chat() {
     e.preventDefault();
     const texto = contenido.trim();
 
-    if (!texto || !receptor) return;
+    if (!texto || !receptorActivo) return;
+    if (receptorActivo === "sistema") {
+      setError("Los avisos del sistema son de solo lectura.");
+      return;
+    }
     if (!stompRef.current?.connected) {
       setError("Conecta el chat antes de enviar mensajes.");
       return;
@@ -179,7 +263,7 @@ export default function Chat() {
 
     const mensaje = {
       emisor: identidad,
-      receptor,
+      receptor: receptorActivo,
       contenido: texto,
     };
 
@@ -191,7 +275,7 @@ export default function Chat() {
     setContenido("");
   }
 
-  const contactoActivo = contactos.find((contacto) => contacto.id === receptor);
+  const contactoActivo = contactos.find((contacto) => contacto.id === receptorActivo);
 
   return (
     <div className="space-y-6">
@@ -228,23 +312,30 @@ export default function Chat() {
 
       <AlertaError mensaje={error} />
 
-      <div className="grid min-h-[620px] grid-cols-1 overflow-hidden rounded-2xl border border-slate-200 bg-white lg:grid-cols-[280px_1fr]">
-        <aside className="border-b border-slate-200 bg-slate-50 p-4 lg:border-b-0 lg:border-r">
+      <div className="grid h-[min(72vh,680px)] min-h-[440px] grid-rows-[minmax(180px,38%)_minmax(0,1fr)] grid-cols-1 overflow-hidden rounded-2xl border border-slate-200 bg-white lg:grid-rows-1 lg:grid-cols-[280px_1fr]">
+        <aside className="flex min-h-0 flex-col overflow-hidden border-b border-slate-200 bg-slate-50 p-4 lg:border-b-0 lg:border-r">
           <div className="mb-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
               Conversaciones
             </p>
             <p className="mt-1 text-sm text-slate-500">
-              Selecciona un destinatario para enviar y consultar mensajes.
+              Elige una persona concreta para abrir una conversación privada.
             </p>
           </div>
 
-          <div className="space-y-2">
-            {contactos.map((contacto) => {
-              const activo = receptor === contacto.id;
-              const noLeidos = mensajes.filter(
-                (mensaje) => (contacto.id === "sistema" && mensaje.emisor === "Sistema" && mensaje.receptor === identidad) || (contacto.id !== "sistema" && mensaje.emisor === contacto.id && mensaje.receptor === identidad)
-              ).length;
+          <div className="mb-3">
+            <Input
+              label="Buscar persona"
+              type="search"
+              value={busquedaContacto}
+              onChange={(e) => setBusquedaContacto(e.target.value)}
+              placeholder="Nombre, correo o especialidad"
+            />
+          </div>
+
+          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto pr-1">
+            {contactosFiltrados.map((contacto) => {
+              const activo = receptorActivo === contacto.id;
 
               return (
                 <button
@@ -264,41 +355,35 @@ export default function Chat() {
                     <span className="block truncate text-sm font-medium text-slate-800">
                       {contacto.nombre}
                     </span>
-                    <span className="block truncate text-xs text-slate-400">{contacto.id}</span>
-                  </span>
-                  {noLeidos > 0 && (
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
-                      {noLeidos}
+                    <span className="block truncate text-xs text-slate-400">
+                      {contacto.rol === "DOCTOR" ? "Doctor" : contacto.rol === "RECEPCIONISTA" ? "Recepcionista" : contacto.rol === "SYSTEM" ? "Sistema" : "Administrador"}
+                      {contacto.detalle ? ` · ${contacto.detalle}` : ""}
                     </span>
-                  )}
+                  </span>
                 </button>
               );
             })}
-          </div>
-
-          <div className="mt-5 rounded-xl border border-slate-200 bg-white p-3">
-            <Input
-              label="Destinatario manual"
-              value={receptor}
-              onChange={(e) => setReceptor(e.target.value.trim().toLowerCase())}
-              placeholder="admin, doctor o recepcionista"
-            />
+            {contactosFiltrados.length === 0 && (
+              <p className="rounded-lg px-2 py-3 text-sm text-slate-500">
+                No hay personas que coincidan con la búsqueda.
+              </p>
+            )}
           </div>
         </aside>
 
-        <section className="flex min-h-[620px] flex-col">
+        <section className="flex min-h-0 flex-col">
           <header className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
             <div>
               <p className="text-sm font-semibold text-slate-800">
-                {contactoActivo?.nombre ?? receptor}
+                {contactoActivo?.nombre ?? receptorActivo}
               </p>
               <p className="text-xs text-slate-400">
-                Canal /topic/{identidad} · envio a /app/mensaje
+                {contactoActivo?.rol === "SYSTEM" ? "Avisos automáticos del sistema" : `Conversación directa con ${contactoActivo?.nombre ?? ""}`}
               </p>
             </div>
           </header>
 
-          <div ref={mensajesRef} className="flex-1 space-y-3 overflow-y-auto bg-slate-50 p-5">
+          <div ref={mensajesRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-slate-50 p-5">
             {conversacion.length === 0 ? (
               <div className="flex h-full items-center justify-center text-center">
                 <div>
@@ -345,7 +430,7 @@ export default function Chat() {
                 placeholder="Escribe un mensaje interno..."
                 className="min-h-12 flex-1 resize-none rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
-              <Button type="submit" disabled={!contenido.trim() || !receptor}>
+              <Button type="submit" disabled={!contenido.trim() || !receptorActivo || receptorActivo === "sistema"}>
                 Enviar
               </Button>
             </div>
