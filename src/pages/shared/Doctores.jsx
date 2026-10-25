@@ -18,6 +18,7 @@ const FORM_VACIO = {
   dni: "",
   telefono: "",
   email: "",
+  claveInicial: "",
   disponible: true,
 };
 
@@ -56,7 +57,22 @@ export default function Doctores() {
   }
 
   useEffect(() => {
-    cargar();
+    let vigente = true;
+    Promise.all([listarDoctores(), listarEspecialidades(true)])
+      .then(([listaDoctores, listaEspecialidades]) => {
+        if (!vigente) return;
+        setDoctores(listaDoctores);
+        setEspecialidades(listaEspecialidades);
+      })
+      .catch((err) => {
+        if (vigente) setError(extraerMensajeError(err));
+      })
+      .finally(() => {
+        if (vigente) setCargando(false);
+      });
+    return () => {
+      vigente = false;
+    };
   }, []);
 
   const doctoresFiltrados = doctores.filter(
@@ -69,9 +85,7 @@ export default function Doctores() {
     paginaActual * itemsPorPagina
   );
 
-  useEffect(() => {
-    setPaginaActual(1);
-  }, [filtroEspecialidad]);
+
 
   function abrirCrear() {
     setEditando(null);
@@ -114,6 +128,7 @@ export default function Doctores() {
           dni: form.dni,
           telefono: form.telefono,
           email: form.email,
+          claveInicial: form.claveInicial,
         });
       }
       setModalAbierto(false);
@@ -152,7 +167,10 @@ export default function Doctores() {
         <select
           className="border border-slate-300 rounded p-2 text-sm text-slate-700"
           value={filtroEspecialidad}
-          onChange={(e) => setFiltroEspecialidad(e.target.value)}
+          onChange={(e) => {
+            setFiltroEspecialidad(e.target.value);
+            setPaginaActual(1);
+          }}
         >
           <option value="">Todas las especialidades</option>
           {especialidades.map((e) => (
@@ -311,6 +329,23 @@ export default function Doctores() {
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
             />
+
+            {!editando && (
+              <>
+                <Input
+                  label="Clave inicial para iniciar sesión"
+                  type="password"
+                  required
+                  minLength={8}
+                  maxLength={64}
+                  value={form.claveInicial}
+                  onChange={(e) => setForm({ ...form, claveInicial: e.target.value })}
+                />
+                <p className="-mt-2 text-xs text-slate-400">
+                  Mínimo 8 caracteres con mayúscula, minúscula, número y símbolo. Esta clave será la del login del doctor.
+                </p>
+              </>
+            )}
 
             {editando && (
               <label className="flex items-center gap-2 text-sm text-slate-700">

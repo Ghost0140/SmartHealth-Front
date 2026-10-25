@@ -47,6 +47,11 @@ export const citasClient = createClient(PORTS.citas);
 export const chatClient = axios.create({
   baseURL: "/chat-api",
 });
+chatClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
 export const doctoresClient = createClient(PORTS.doctores);
 export const pacientesClient = createClient(PORTS.pacientes);
 export const recepcionistasClient = createClient(PORTS.recepcionistas);
