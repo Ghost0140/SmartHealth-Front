@@ -8,6 +8,7 @@ import { extraerMensajeError } from "../../utils/errorHandler";
 
 const CHAT_URL = "http://localhost:8088/chat";
 const STOMP_DESTINO = "/app/mensaje";
+
 function identidadPorUsuario(usuario) {
   if (usuario?.rol === "ADMIN") return "admin";
   if (usuario?.rol === "DOCTOR" && usuario.idDoctor) return `doctor:${usuario.idDoctor}`;
@@ -75,12 +76,21 @@ export default function Chat() {
 
   const contactos = useMemo(() => {
     const lista = [];
+
     if (usuario?.rol !== "ADMIN") {
-      lista.push({ id: "admin", nombre: "Administrador", detalle: "Administración", rol: "ADMIN", inicial: "A" });
+      lista.push({
+        id: "admin",
+        nombre: "Administrador",
+        detalle: "Administración",
+        rol: "ADMIN",
+        inicial: "A",
+      });
     }
+
     doctores.forEach((doctor) => {
       const id = `doctor:${doctor.idDoctor}`;
       if (id === identidad) return;
+
       const nombre = `Dr. ${doctor.nombres} ${doctor.apellidos}`.trim();
       lista.push({
         id,
@@ -91,11 +101,14 @@ export default function Chat() {
         inicial: inicialDe(doctor.nombres),
       });
     });
+
     recepcionistas.forEach((recepcionista) => {
       const correo = recepcionista.email?.trim().toLowerCase();
       if (!correo) return;
+
       const id = `recepcionista:${correo}`;
       if (id === identidad) return;
+
       const nombre = `${recepcionista.nombres} ${recepcionista.apellidos}`.trim();
       lista.push({
         id,
@@ -106,12 +119,22 @@ export default function Chat() {
         inicial: inicialDe(recepcionista.nombres),
       });
     });
-    lista.push({ id: "sistema", nombre: "Avisos del sistema", detalle: "Mensajes automáticos", rol: "SYSTEM", inicial: "S" });
+
+    lista.push({
+      id: "sistema",
+      nombre: "Avisos del sistema",
+      detalle: "Mensajes automáticos",
+      rol: "SYSTEM",
+      inicial: "S",
+    });
+
     return lista;
   }, [doctores, recepcionistas, identidad, usuario?.rol]);
+
   const receptorActivo = contactos.some((contacto) => contacto.id === receptor)
     ? receptor
     : contactos[0]?.id ?? "";
+
   const contactosFiltrados = contactos.filter((contacto) =>
     `${contacto.nombre} ${contacto.detalle ?? ""} ${contacto.rol}`
       .toLowerCase()
@@ -123,7 +146,9 @@ export default function Chat() {
       mensajes
         .filter(
           (mensaje) =>
-            (receptorActivo === "sistema" && mensaje.emisor === "Sistema" && (mensaje.receptor === identidad || mensaje.receptor === rolAlias)) ||
+            (receptorActivo === "sistema" &&
+              mensaje.emisor === "Sistema" &&
+              (mensaje.receptor === identidad || mensaje.receptor === rolAlias)) ||
             (receptorActivo !== "sistema" &&
               ((mensaje.emisor === identidad && mensaje.receptor === receptorActivo) ||
                 (mensaje.emisor === receptorActivo && mensaje.receptor === identidad)))
@@ -134,6 +159,7 @@ export default function Chat() {
 
   useEffect(() => {
     let activo = true;
+
     Promise.all([listarDoctores(true), listarRecepcionistas(true)])
       .then(([listaDoctores, listaRecepcionistas]) => {
         if (!activo) return;
@@ -143,6 +169,7 @@ export default function Chat() {
       .catch((err) => {
         if (activo) setError(extraerMensajeError(err));
       });
+
     return () => {
       activo = false;
     };
@@ -162,6 +189,7 @@ export default function Chat() {
     let activo = true;
 
     if (!identidad) return undefined;
+
     listarMensajesChat()
       .then((data) => {
         if (activo) setMensajes(data);
@@ -192,6 +220,7 @@ export default function Chat() {
 
   async function conectar() {
     if (stompRef.current?.connected || conectando) return;
+
     if (!identidad) {
       setError("No se encontró una identidad válida para esta cuenta. Cierra sesión e inicia nuevamente.");
       return;
@@ -199,8 +228,10 @@ export default function Chat() {
 
     setError("");
     setConectando(true);
+
     try {
       await cargarDependenciasChat();
+
       const socket = new window.SockJS(CHAT_URL);
       const stomp = window.Stomp.over(socket);
       stomp.debug = null;
@@ -213,9 +244,11 @@ export default function Chat() {
           setConectando(false);
 
           const destinos = [...new Set([identidad, rolAlias].filter(Boolean))];
+
           destinos.forEach((destino) => {
             stomp.subscribe(`/topic/${destino}`, (message) => {
               const recibido = JSON.parse(message.body);
+
               setMensajes((actuales) =>
                 recibido.id && actuales.some((actual) => actual.id === recibido.id)
                   ? actuales
@@ -244,6 +277,7 @@ export default function Chat() {
     } else {
       setConectado(false);
     }
+
     stompRef.current = null;
   }
 
@@ -252,10 +286,12 @@ export default function Chat() {
     const texto = contenido.trim();
 
     if (!texto || !receptorActivo) return;
+
     if (receptorActivo === "sistema") {
       setError("Los avisos del sistema son de solo lectura.");
       return;
     }
+
     if (!stompRef.current?.connected) {
       setError("Conecta el chat antes de enviar mensajes.");
       return;
@@ -268,10 +304,12 @@ export default function Chat() {
     };
 
     stompRef.current.send(STOMP_DESTINO, {}, JSON.stringify(mensaje));
+
     setMensajes((actuales) => [
       ...actuales,
       { ...mensaje, id: `local-${Date.now()}`, fecha: new Date().toISOString() },
     ]);
+
     setContenido("");
   }
 
@@ -282,7 +320,7 @@ export default function Chat() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold text-slate-800">Chat interno</h1>
-          <p className="text-slate-500 text-sm mt-1">
+          <p className="mt-1 text-sm text-slate-500">
             Comunicación básica entre administrador, doctores y recepción
           </p>
         </div>
@@ -295,9 +333,11 @@ export default function Chat() {
           >
             {conectado ? `Conectado como ${identidad}` : `Usuario de chat: ${identidad}`}
           </span>
+
           <Button variant="secondary" onClick={cargarHistorial}>
             Actualizar historial
           </Button>
+
           {conectado ? (
             <Button variant="danger" onClick={desconectar}>
               Desconectar
@@ -351,18 +391,26 @@ export default function Chat() {
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-teal-600 text-sm font-semibold text-white">
                     {contacto.inicial}
                   </span>
+
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium text-slate-800">
                       {contacto.nombre}
                     </span>
                     <span className="block truncate text-xs text-slate-400">
-                      {contacto.rol === "DOCTOR" ? "Doctor" : contacto.rol === "RECEPCIONISTA" ? "Recepcionista" : contacto.rol === "SYSTEM" ? "Sistema" : "Administrador"}
+                      {contacto.rol === "DOCTOR"
+                        ? "Doctor"
+                        : contacto.rol === "RECEPCIONISTA"
+                          ? "Recepcionista"
+                          : contacto.rol === "SYSTEM"
+                            ? "Sistema"
+                            : "Administrador"}
                       {contacto.detalle ? ` · ${contacto.detalle}` : ""}
                     </span>
                   </span>
                 </button>
               );
             })}
+
             {contactosFiltrados.length === 0 && (
               <p className="rounded-lg px-2 py-3 text-sm text-slate-500">
                 No hay personas que coincidan con la búsqueda.
@@ -378,16 +426,23 @@ export default function Chat() {
                 {contactoActivo?.nombre ?? receptorActivo}
               </p>
               <p className="text-xs text-slate-400">
-                {contactoActivo?.rol === "SYSTEM" ? "Avisos automáticos del sistema" : `Conversación directa con ${contactoActivo?.nombre ?? ""}`}
+                {contactoActivo?.rol === "SYSTEM"
+                  ? "Avisos automáticos del sistema"
+                  : `Conversación directa con ${contactoActivo?.nombre ?? ""}`}
               </p>
             </div>
           </header>
 
-          <div ref={mensajesRef} className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-slate-50 p-5">
+          <div
+            ref={mensajesRef}
+            className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-slate-50 p-5"
+          >
             {conversacion.length === 0 ? (
               <div className="flex h-full items-center justify-center text-center">
                 <div>
-                  <p className="text-sm font-medium text-slate-600">No hay mensajes en esta conversación.</p>
+                  <p className="text-sm font-medium text-slate-600">
+                    No hay mensajes en esta conversación.
+                  </p>
                   <p className="mt-1 text-xs text-slate-400">
                     Conecta el chat y envia un mensaje para probar el WebSocket.
                   </p>
@@ -396,8 +451,12 @@ export default function Chat() {
             ) : (
               conversacion.map((mensaje, index) => {
                 const mio = mensaje.emisor === identidad;
+
                 return (
-                  <div key={mensaje.id ?? `${mensaje.emisor}-${mensaje.fecha}-${index}`} className={`flex ${mio ? "justify-end" : "justify-start"}`}>
+                  <div
+                    key={mensaje.id ?? `${mensaje.emisor}-${mensaje.fecha}-${index}`}
+                    className={`flex ${mio ? "justify-end" : "justify-start"}`}
+                  >
                     <div
                       className={`max-w-[78%] rounded-2xl px-4 py-3 text-sm shadow-sm ${
                         mio
@@ -406,7 +465,11 @@ export default function Chat() {
                       }`}
                     >
                       <p className="break-words">{mensaje.contenido}</p>
-                      <p className={`mt-1 text-[11px] ${mio ? "text-teal-50" : "text-slate-400"}`}>
+                      <p
+                        className={`mt-1 text-[11px] ${
+                          mio ? "text-teal-50" : "text-slate-400"
+                        }`}
+                      >
                         {mensaje.emisor} · {formatoHora(mensaje.fecha)}
                       </p>
                     </div>
@@ -430,7 +493,12 @@ export default function Chat() {
                 placeholder="Escribe un mensaje interno..."
                 className="min-h-12 flex-1 resize-none rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
-              <Button type="submit" disabled={!contenido.trim() || !receptorActivo || receptorActivo === "sistema"}>
+              <Button
+                type="submit"
+                disabled={
+                  !contenido.trim() || !receptorActivo || receptorActivo === "sistema"
+                }
+              >
                 Enviar
               </Button>
             </div>
